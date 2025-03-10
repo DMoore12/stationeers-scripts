@@ -1,0 +1,12 @@
+# MacOS
+.DS_Store
+.ds_store
+
+# Logs
+logs
+
+# Git hidden
+.git
+
+# Python cache
+__pycache__

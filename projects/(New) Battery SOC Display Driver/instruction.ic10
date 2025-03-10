@@ -1,0 +1,96 @@
+alias batt0 d0
+alias batt1 d1
+alias batt2 d2
+alias batt3 d3
+alias batt4 d4
+alias disp d5
+
+alias soc r0
+alias tmp r1
+
+define BLUE 0
+define GRAY 1
+define GREEN 2
+define ORANGE 3
+define RED 4
+define YELLOW 5
+define WHITE 6
+define BLACK 7
+define BROWN 8
+define KHAKI 9
+define PINK 10
+define PURPLE 11
+
+loop:
+
+# Preload SOC to 0. We're going to sum and divide to compute average
+move soc 0
+
+# Load and sum first battery
+l tmp batt0 Ratio
+add soc soc tmp
+
+# Load and sum second battery
+l tmp batt1 Ratio
+add soc soc tmp
+
+# Load and sum third battery
+l tmp batt2 Ratio
+add soc soc tmp
+
+# Load and sum fourth battery
+l tmp batt3 Ratio
+add soc soc tmp
+
+# Load and sum fifth battery
+l tmp batt4 Ratio
+add soc soc tmp
+
+# Compute average SOC
+div soc soc 5
+
+# Display SOC
+s disp Setting soc
+s disp Mode 1
+
+# Display low SOC warning below 2% (no blocks)
+bge soc 0.02 pct2
+s disp Color GRAY
+j end
+pct2:
+
+# Display critically low SOC below 5% (1 block, red, blinking)
+bge soc 0.05 pct5
+s disp Color RED
+j end
+pct5:
+
+# Display low SOC below 10% (1 block, red)
+bge soc 0.1 pct10
+s disp Color RED
+j end
+pct10:
+
+# Display low SOC below 20% (2 blocks, orange)
+bge soc 0.2 pct20
+s disp Color ORANGE
+j end
+pct20:
+
+# Display normal SOC below 60% (3 blocks, yellow)
+bge soc 0.6 pct60
+s disp Color YELLOW
+j end
+pct60:
+
+# Display high SOC below 90% (4 blocks, green)
+bge soc 0.9 pct90
+s disp Color GREEN
+j end
+pct90:
+
+# Display fully charged at or above 90% (5 blocks, blue)
+s disp Color BLUE
+end:
+yield
+j loop
