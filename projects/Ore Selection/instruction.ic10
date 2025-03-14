@@ -1,0 +1,44 @@
+alias oreSelect      d0
+alias oreStartButton d1
+alias oreAmount      d2
+alias amountDisp     d3
+alias oreDisp        d4
+
+alias selectedOre    r0
+alias amount         r1
+
+# Stack is persistent, so clear it so we can reconfigure it
+move sp 0
+
+# Use the stack as an array containing ingot hashes
+push -1301215609 # Iron
+push  -654790771 # Steel
+push  -404336834 # Copper
+push   226410516 # Gold
+push  -290196476 # Silicon
+push   502280180 # Electrum
+push  1058547521 # Constantan
+push   -82508479 # Solder
+push -1897868623 # Stellite
+push   412924554    # Astroloy
+push  1579842814 # Hastelloy
+push  -787796599 # Inconel
+push  -297990285 # Invar
+push  2134647745 # Lead
+push -1406385572 # Nickel
+push  -929742000 # Silver
+push   156348098 # Waspaloy
+
+loop:
+yield
+
+l selectedOre oreSelect Setting
+l amount      oreAmount Setting
+
+mul amount amount 50
+get selectedOre db selectedOre
+
+s db         Setting selectedOre
+s amountDisp Setting amount
+
+j loop

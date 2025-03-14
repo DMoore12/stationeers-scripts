@@ -1,0 +1,40 @@
+alias generator    d0
+alias generatorLED d1
+alias battery      d2
+alias generatorSW  d3
+alias SOCratio     r0
+alias SOC          r1
+alias override     r2
+
+define offSOC 50
+define onSOC  10
+
+loop:
+yield
+l SOCratio db:0 Channel0
+mul SOC SOCratio 100
+s db Setting SOC
+
+l override generatorSW Open
+
+beq override 1 toggleOverride
+blt SOC onSOC  toggleOn
+bgt SOC offSOC toggleOff
+j loop
+
+toggleOverride:
+s generator    On 1
+s generatorLED Color 2
+s generatorLED On 1
+j loop
+
+toggleOn:
+s generator    On 1
+s generatorLED Color 4
+s generatorLED On 1
+j loop
+
+toggleOff:
+s generator    On 0
+s generatorLED On 0
+j loop

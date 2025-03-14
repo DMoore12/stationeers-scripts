@@ -1,0 +1,41 @@
+# Alias devices
+alias enable       d0
+alias temperature  d1
+alias pressure     d2
+alias tempDisp     d3
+alias pressureDisp d4
+
+# Alias control setpoints
+alias en r0
+alias t  r1
+alias p  r2
+
+# Alias for pressure display value
+alias pDisp r4
+
+loop:
+# Load device states
+l en d0 Open
+l t  d1 Setting
+l p  d2 Setting
+
+# Store a copy of pressure prior to multiply
+move pDisp p
+
+# Scale prior to network broadcast
+mul t t 10
+mul p p 1000
+
+# Set channel outputs
+s db:0 Channel0 en
+s db:0 Channel1 t
+s db:0 Channel2 p
+s db Setting en
+
+# Set display outputs
+s tempDisp     Setting t
+s pressureDisp Setting pDisp
+
+# Yield and return to loop
+yield
+j loop

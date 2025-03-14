@@ -1,0 +1,109 @@
+alias enable d1
+alias vent d2
+alias sensor d3
+alias p r0
+alias t r1
+alias en r2
+alias pgood r3
+alias tgood r4
+alias genOn r5
+define heating 24258244
+define cooling -2087593337
+define generator 1165997963
+# Set everything to a known state before starting
+sb heating On 0
+sb cooling On 0
+sb cooling Mode 0
+s vent On 0
+s vent Mode 0
+sb generator On 0
+LOOP:
+# Short circuit when disabled
+l en enable Open
+beq en 1 SENSE
+sb heating On 0
+sb cooling On 0
+s vent On 0
+sb generator On 0
+j END
+# Sensing
+SENSE:
+l p sensor Pressure
+l t sensor Temperature
+sub t t 273
+# Pressure regulation
+PREG:
+blt p 25 PLO
+bgt p 75 PHI
+blt p 30 TREG
+bgt p 70 TREG
+# Atmosphere at target. Turn vent off
+s vent On 0
+s vent Setting 1
+j PCHECK
+# Atmosphere below target. Turn vent on inward
+PLO:
+s vent On 1
+s vent Setting 1
+j PCHECK
+# Atmosphere above target. Turn vent on outward
+PHI:
+s vent On 1
+s vent Setting 0
+# Pressure check
+PCHECK:
+blt p 20 PBAD
+bgt p 200 PBAD
+# Pressure is in range for operation
+move pgood 1
+j TREG
+# Pressure is not in range for operation
+PBAD:
+move pgood 0
+# Temperature regulation
+TREG:
+#s db Setting pgood
+blt t 10 TLO
+bgt t 25 THI
+blt t 12 GREG
+bgt t 24 GREG
+# Atmosphere at target. Turn air conditioning and heaters off
+sb heating On 0
+sb cooling On 0
+sb cooling Mode 0
+j TCHECK
+# Atmosphere below target. Turn on wall heaters
+TLO:
+sb heating On 1
+sb cooling On 0
+sb cooling Mode 0
+j TCHECK
+# Atmosphere above target. Turn on air conditioning
+THI:
+sb heating On 0
+sb cooling On 1
+sb cooling Mode 1
+# Temperature check
+TCHECK:
+blt t 5 TBAD
+bgt t 55 TBAD
+# Temperature is in range for operation
+move tgood 1
+j GREG
+# Temperature is out of range for operation
+TBAD:
+move tgood 0
+# Generator regulation
+GREG:
+#beq pgood 0 OFF
+#beq tgood 0 OFF
+sb generator On 1
+#s db Setting 1
+j END
+OFF:
+sb generator On 0
+#s db Setting 0
+END:
+s db Setting pgood
+yield
+j LOOP

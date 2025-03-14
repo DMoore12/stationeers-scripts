@@ -14,7 +14,7 @@ LOGGING_DIRECTORY = "./logs"
 #
 # Arguments:
 #   - module - name of module under which to log
-def config_logging(module):
+def config_logging(module, level=logging.INFO):
     user = os.getlogin()
     dir = Path(LOGGING_DIRECTORY)
 
@@ -38,14 +38,14 @@ def config_logging(module):
     # Get and configure logger
     logger = logging.getLogger(module)
     logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter(f"%(asctime)s - {name} -  %(message)s")
+    formatter = logging.Formatter(f"%(asctime)s - {name}.%(levelname)-5s - %(message)s")
     file_handler = logging.FileHandler(str(dir))
     file_handler.setFormatter(formatter)
     file_handler.setLevel(logging.DEBUG)
     logger.addHandler(file_handler)
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
-    console_handler.setLevel(logging.DEBUG)
+    console_handler.setLevel(level)
     logger.addHandler(console_handler)
 
     # Print initialization message
@@ -57,7 +57,8 @@ def config_logging(module):
 utils_logger = config_logging(Path(__file__).name.replace(".py", ""))
 
 # Global constants
-ROOT_DIRECTORY = "C:/Users/{user}/Documents/My Games/Stationeers/scripts"
+# TODO (DWM): revert from test
+ROOT_DIRECTORY = "C:/Users/{user}/Documents/My Games/Stationeers/test"
 MIRROR_DIRECTORY = "./projects"
 MIRROR_PERIOD = 1
 FRIENDLY_FILE_NAME = "instruction.ic10"

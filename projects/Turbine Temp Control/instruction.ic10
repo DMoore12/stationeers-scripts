@@ -1,0 +1,80 @@
+alias radiatorExtendWriter d0
+alias radiatorAngleWriter d1
+alias atmoTempSensor d2
+alias coolantTempSensor d3
+alias coolantValve d4
+alias daylightSensor d5
+
+alias atmoTemp r0
+alias solAng r1
+alias radiatorAngle r2
+alias lexRad r3
+
+# alias lexRad
+move lexRad -566775170
+
+define TempHi 45
+define TempLo 5
+define PI 3.141
+
+#Loop Begin
+loop:
+l r0 atmoTempSensor Temperature
+l r1 daylightSensor SolarAngle
+bgt r0 TempHi 24#Temperature is above threshold
+blt r0 TempLo 28 #Temperature is below threshold
+sb lexRad Open 0 # If we're in range just close the radiator
+j loop # We're in range just go back to top of loop
+s lexRad Open 1#Temp HI
+add radiatorAngle solAng PI
+s lexRad Horizontal radiatorAngle
+j loop # Back to Loop
+s lexRad Open 0 # Too Cold, close the radiator
+j loop # Back To Loop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+a

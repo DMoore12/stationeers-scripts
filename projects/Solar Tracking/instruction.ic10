@@ -1,0 +1,23 @@
+alias sense d1
+
+alias horiz r0
+alias vert  r1
+alias irr   r2
+
+define panel -539224550
+
+loop:
+yield
+l horiz sense Horizontal
+l vert  sense Vertical
+l irr   sense Activate
+s db Setting irr
+sb panel Horizontal 270
+bgt vert 180 night
+sub vert 180 vert
+sb panel Vertical vert
+j loop
+
+night:
+sb panel Vertical 180
+j loop

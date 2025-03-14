@@ -1,0 +1,100 @@
+alias SOCdisp  d0
+alias POWdisp  d1
+alias battery  d2
+alias meter    d3
+alias SOCdisp2 d4
+alias POWdisp2 d5
+
+alias SOCratio r0
+alias SOC      r1
+alias power    r2
+
+define BLUE   0
+define GRAY   1
+define GREEN  2
+define ORANGE 3
+define RED    4
+define YELLOW 5
+define WHITE  6
+define BLACK  7
+define BROWN  8
+define KHAKI  9
+define PINK   10
+define PURPLE 11
+
+define POWERLOW  2000
+define POWERMID  4000
+define POWERHIGH 6000
+define POWERMAX  7000
+
+define SOCLOW  10
+define SOCMID  50
+define SOCHIGH 90
+
+loop:
+l SOCratio db:0 Channel0
+l power    db:0 Channel2
+mul SOC SOCratio 100
+
+blt SOC SOCLOW  SOCred
+blt SOC SOCMID  SOCyellow
+blt SOC SOCHIGH SOCgreen
+j SOCblue
+endSOCcolorset:
+
+blt power POWERLOW  powerblue
+blt power POWERMID  powergreen
+blt power POWERHIGH poweryellow
+blt power POWERMAX  powerorange
+j powerred
+endPOWcolorset:
+
+s SOCdisp  Setting SOCratio
+s SOCdisp2 Setting SOCratio
+s POWdisp  Setting power
+s POWdisp2 Setting power
+s SOCdisp  Mode 1
+s SOCdisp2 Mode 1
+s POWdisp  Mode 2
+s POWdisp2 Mode 2
+
+yield
+j loop
+
+SOCred:
+s SOCdisp  Color RED
+s SOCdisp2 Color RED
+j endSOCcolorset
+SOCyellow:
+s SOCdisp  Color YELLOW
+s SOCdisp2 Color YELLOW
+j endSOCcolorset
+SOCgreen:
+s SOCdisp  Color GREEN
+s SOCdisp2 Color GREEN
+j endSOCcolorset
+SOCblue:
+s SOCdisp  Color BLUE
+s SOCdisp2 Color BLUE
+j endSOCcolorset
+
+powerblue:
+s POWdisp  Color BLUE
+s POWdisp2 Color BLUE
+j endPOWcolorset
+powergreen:
+s POWdisp  Color GREEN
+s POWdisp2 Color GREEN
+j endPOWcolorset
+poweryellow:
+s POWdisp  Color YELLOW
+s POWdisp2 Color YELLOW
+j endPOWcolorset
+powerorange:
+s POWdisp  Color ORANGE
+s POWdisp2 Color ORANGE
+j endPOWcolorset
+powerred:
+s POWdisp  Color RED
+s POWdisp2 Color RED
+j endPOWcolorset

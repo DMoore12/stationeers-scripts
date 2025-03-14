@@ -1,0 +1,66 @@
+alias psensor d0
+alias vent d1
+alias p r0
+
+define THRESHHI 90
+define THRESHLO 60
+define THRESHOFFLO 70
+define THRESHOFFHI 80
+
+# Contract:
+#   - If pressure is less than 60 kPa:
+#     - Set flow inward and turn on
+#   - If pressure is greater than 90 kPa:
+#     - Set flow outward and turn on
+#   - If pressure is between 70 and 80 kPa:
+#     - Turn off
+#   - Always set lock to 1
+
+# Start of loop
+LOOP:
+
+# Move the guard rails out of the way
+# NOTE: As per our testing, the external needs to be set at least
+#       10 kPa above PRESSUREHI or the vent won't be able to move
+#       any air out of the building when the upper threshold is
+#       reached
+s vent PressureExternal 130
+s vent PressureInternal 130
+
+# Load pressure sensor value into r0
+l p psensor Pressure
+
+# If pressure is above target, jump to high routine
+bgt p THRESHHI PRESSUREHI
+
+# If pressure is below target, jump to low routine
+blt p THRESHLO PRESSURELO
+
+# Now we know we're between 60 and 90, so we can do some simple things...
+# If pressure is below low threshold, jump to end
+# It's the same for above high threshold
+blt p THRESHOFFLO END
+bgt p THRESHOFFHI END
+
+# Correct pressure routine (set no flow)
+PRESSURENOM:
+s vent On 0
+s vent Mode 0
+j END
+
+# High pressure routine (set flow outward)
+PRESSUREHI:
+s vent On 1
+s vent Mode 0
+j END
+
+# Low pressure routine (set flow inward)
+PRESSURELO:
+s vent On 1
+s vent Mode 1
+j END
+
+# Cleanup
+END:
+yield
+j LOOP

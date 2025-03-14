@@ -1,0 +1,85 @@
+alias furnace     d0 # Advanced furnace
+alias mixer       d1 # Gas mixer
+alias relief      d2 # Relief valve (digital)
+alias n2o         d3 # N2O volume pump
+alias volatiles   d4 # Fuel volume pump
+alias en          r0 # Furnace control enable
+alias tDes        r1 # Desired temperature
+alias pDes        r2 # Desired pressure
+alias t           r3 # Actual temperature
+alias p           r4 # Actual pressure
+alias ventState   r5 # Relief valve state (for hysteresis control)
+alias input       r6 # Input volume
+define PHYST    5000 # Pressure control hysteresis
+define PMAX 55000000 # Max allowable pressure
+define THYST     100 # Temperature control hysteresis
+
+loop:
+yield
+# Load values
+l en   db:0 Channel0
+l tDes db:0 Channel1
+l pDes db:0 Channel2
+l t    furnace Temperature
+l p    furnace Pressure
+
+# Exit early if we want the furnace off
+beq en 0 off
+s furnace   On   1 # Power up the furnace
+j tCont
+
+off:
+s furnace   On       0 # Turn the furnace on
+s furnace   Activate 0 # Stop combustion
+s mixer     On       0 # Turn the mixer off (saves power)
+s n2o       On       0 # Turn the N2O pump off (prevent overpressure)
+s volatiles On       0 # Turn the fuel pump off (prevent overpressure)
+j pCont # Jump to pressure control. We always want to run to prevent pressure buildup
+
+tCont:
+sub input tDes t
+div input input tDes
+mul input input 10
+blt t tDes startComb
+add tDes tDes THYST
+bgt t tDes stopComb
+j tContEnd
+startComb:
+s furnace   Activate     1
+s furnace   SettingInput input
+s mixer     On           1
+s mixer     Setting      0
+s n2o       On           0
+s n2o       Setting      5
+s volatiles On           1
+s volatiles Setting      5
+s db Setting 1
+j tContEnd
+stopComb:
+s furnace Activate 0
+s furnace SettingInput 0
+s mixer     On 0
+s n2o       On 0
+s volatiles On 0
+s db Setting 0
+j tContEnd
+tContEnd:
+j pCont
+
+pCont:
+bgt p PMAX startVent
+blt p pDes stopVent
+add pDes pDes PHYST
+bgt p pDes startVent
+j pContEnd
+startVent:
+move ventState 1
+s furnace SettingOutput 20
+s relief Setting 1
+j pContEnd
+stopVent:
+move ventState 0
+s furnace SettingOutput 0
+s relief Setting 0
+pContEnd:
+j loop

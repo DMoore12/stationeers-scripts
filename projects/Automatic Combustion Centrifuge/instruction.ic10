@@ -1,0 +1,73 @@
+alias enable d0
+alias led    d1
+
+alias en     r0
+alias stress r1
+alias rpm    r2
+alias count  r3
+alias state  r4
+
+define FALSE 0
+define TRUE  1
+define MAXSTRESSUP 10
+define MAXSRESSDN  33
+define MAXCOUNT    2500
+define BLUE   0
+define GREEN  2
+define RED    4
+define YELLOW 5
+
+move state FALSE
+
+loop:
+yield
+
+l stress db Stress
+l rpm    db Rpm
+l count  db Reagents
+
+s led On 1
+
+l en enable Open
+beq en TRUE fork
+move state FALSE
+
+fork:
+beq state TRUE on
+j off
+
+on:
+s db Open              0
+s db CombustionLimiter 100
+s db Throttle          100
+s led Color GREEN
+blt stress MAXSTRESSUP end
+s db CombustionLimiter 10
+s db Throttle          10
+s led Color YELLOW
+blt count MAXCOUNT end
+move state FALSE
+j end
+
+off:
+bgt rpm 100 endOpen
+s db Open              1
+s db CombustionLimiter 0
+s db Throttle          0
+s led Color BLUE
+j offCompare
+endOpen:
+s db CombustionLimiter 0
+s db Throttle          0
+s led Color YELLOW
+blt stress MAXSRESSDN end
+s db CombustionLimiter 10
+s db Throttle          10
+s led Color RED
+offCompare:
+bgt count 0 end
+move state TRUE
+j end
+
+end:
+j loop

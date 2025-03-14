@@ -1,0 +1,21 @@
+alias sensor d0
+alias co2 r0
+
+LOOP:
+l co2 sensor RatioCarbonDioxide
+s db Lock 1
+blt co2 0.04 ON
+bgt co2 0.10 OFF
+j END
+
+ON:
+s db Mode 1
+j END
+
+OFF:
+s db Mode 0
+j END
+
+END:
+yield
+j LOOP

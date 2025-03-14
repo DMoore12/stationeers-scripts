@@ -1,0 +1,10 @@
+alias apc  d0
+alias disp d1
+
+alias power r0
+
+loop:
+l power apc RequiredPower
+s disp Setting power
+yield
+j loop

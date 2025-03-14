@@ -1,0 +1,59 @@
+alias occ  d0
+alias temp d1
+alias v1   d2
+alias v2   d3
+
+alias ontime r0
+alias motion r1
+alias temperature r2
+
+define TEMPHI 298
+define TEMPLO 293
+
+define DEFONTIME 10
+define LIGHTHASH 1108423476
+
+loop:
+# START LIGHT CONTROL
+l motion occ Activate
+s db Setting motion
+beq motion 0 lightoff
+move ontime DEFONTIME
+
+lightoff:
+beq ontime 0 lightskip
+sub ontime ontime 1
+
+lightskip:
+bgt ontime 0 lighton
+sb LIGHTHASH On 0
+j lightend
+
+lighton:
+sb LIGHTHASH On 1
+
+lightend:
+# END LIGHT CONTROL
+
+# START TEMPERATURE CONTROL
+l temperature temp Temperature
+
+blt temperature TEMPLO tempoff
+bgt temperature TEMPHI tempon
+j tempend
+
+tempoff:
+s v1 On 0
+s v2 On 0
+j tempend
+
+tempon:
+s v1 On 1
+s v2 On 1
+j tempend
+
+tempend:
+# END TEMPERATURE CONTROL
+
+yield
+j loop

@@ -1,0 +1,41 @@
+alias batt0   d0
+alias batt1   d1
+alias batt2   d2
+alias batt3   d3
+alias batt4   d4
+alias batt5   d5
+
+alias SOC0     r0
+alias SOC1     r1
+alias SOCratio r2
+alias SOCsum   r3
+alias SOCfinal r4
+
+loop:
+# Load the SOC of each battey on the network
+l SOC0 batt0 Ratio
+l SOC1 batt1 Ratio
+
+# Sum the SOCs
+add SOCsum SOC0 SOC1
+l SOC1 batt2 Ratio
+add SOCsum SOCsum SOC1
+l SOC1 batt3 Ratio
+add SOCsum SOCsum SOC1
+l SOC1 batt4 Ratio
+add SOCsum SOCsum SOC1
+l SOC1 batt5 Ratio
+add SOCsum SOCsum SOC1
+
+# Compute average SOC
+div SOCratio SOCsum 6
+
+# Multiply by 100 for display purposes
+mul SOCfinal SOCratio 100
+
+# Write SOC out
+s db:1 Channel0 SOCratio
+s db:1 Channel1 SOCfinal
+
+yield
+j loop

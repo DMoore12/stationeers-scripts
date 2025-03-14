@@ -1,0 +1,80 @@
+alias disp1 d0
+alias disp2 d1
+alias batt  d2
+
+alias SOCratio r0
+alias SOC      r1
+alias power    r2
+
+alias current  r3
+alias timer    r4
+
+define ONTIME  20
+
+define BLUE   0
+define GREEN  2
+define RED    5
+define YELLOW 5
+
+define SOCLOW  10
+define SOCMID  50
+define SOCHIGH 90
+
+define POWERLO  2000
+define POWERMID 4000
+define POWERHI  6000
+define POWERMAX 70000
+
+move timer ONTIME
+
+loop:
+yield
+l SOCratio batt Ratio
+mul SOC SOCratio 100
+l power batt Power
+sub timer timer 1
+bne timer 0 skipswitch
+not current current
+move timer ONTIME
+skipswitch:
+beq current 0 disppower
+j dispSOC
+endcolor:
+j loop
+
+dispSOC:
+s disp1 Mode    1
+s disp1 Setting SOCratio
+s disp2 Mode    1
+s disp2 Setting SOCratio
+blt SOC SOCLOW  colorred
+blt SOC SOCMID  coloryellow
+blt SOC SOCHIGH colorgreen
+j colorblue
+
+disppower:
+s disp1 Mode    2
+s disp1 Setting power
+s disp2 Mode    2
+s disp2 Setting power
+blt power POWERLO colorblue
+blt power POWERMID colorgreen
+blt power POWERHI  coloryellow
+j colorred
+
+colorred:
+s disp1 Color RED
+s disp2 Color RED
+j endcolor
+coloryellow:
+s disp1 Color YELLOW
+s disp2 Color YELLOW
+j endcolor
+colorgreen:
+s disp1 Color GREEN
+s disp2 Color GREEN
+j endcolor
+colorblue:
+s disp1 Color BLUE
+s disp2 Color BLUE
+j endcolor
