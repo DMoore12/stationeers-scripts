@@ -36,7 +36,7 @@ def config_logging(module):
         name = name[:3]
 
     # Get and configure logger
-    logger = logging.getLogger()
+    logger = logging.getLogger(module)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter(f"%(asctime)s - {name} -  %(message)s")
     file_handler = logging.FileHandler(str(dir))
@@ -61,6 +61,7 @@ ROOT_DIRECTORY = "C:/Users/{user}/Documents/My Games/Stationeers/scripts"
 MIRROR_DIRECTORY = "./projects"
 MIRROR_PERIOD = 1
 FRIENDLY_FILE_NAME = "instruction.ic10"
+META_FILE_NAME = "instruction.toml"
 XML_FILE_NAME = "instruction.xml"
 
 # Class representing a version comparison
@@ -214,26 +215,27 @@ class Version:
         # Compare prototype version
         return VersionResult.compare(v1.proto, v2.proto)
 
+# resolved_root_dir
+#
+# Gets the resolved root directory applying replacements where valid
+# and necessary
 def resolved_root_dir():
     install_dir = ROOT_DIRECTORY
     sequences = re.findall("{.*}", install_dir)
 
     for sequence in sequences:
         replacement = ""
-        sequence = sequence[1:len(sequence)-1]
+        text = sequence[1:len(sequence)-1]
 
-        match sequence:
+        match text:
             case "user":
                 replacement = os.getlogin()
-                break
 
             case _:
-                utils_logger.error(f"Unknown match value '{sequence}'")
+                utils_logger.error(f"Unknown match value '{text}'")
                 return "."
             
         install_dir = install_dir.replace(sequence, replacement)
-
-    utils_logger.debug(f"Determined root directory to be '{install_dir}'")
 
     return install_dir
         

@@ -1,7 +1,7 @@
 # Global imports
 import os
 import time
-import logging
+from bs4 import BeautifulSoup
 
 # Local imports
 from utils import *
@@ -23,46 +23,110 @@ class Project:
     #      game. XML files are automatically converted to 'friendly' files for
     #      storage on Github
 
-    # Class variables
+    # Constants
+    DEFAULT_PATH = Path(".")
+
+    # Metadata
     name = ""
-    root = Path(".")
-    mirror = Path(".")
-    friendly_file = Path(".")
-    friendly_generated = False
-    xml_file = Path(".")
-    xml_generated = False
     project_version = Version(0, 0, 0, True)
+    date_time = 0
+    game_version = ""
+    description = ""
+    author = ""
+    workshop_file_handle = 0
+
+    # Instructions
+    instructions = []
+
+    # FS info
+    root = DEFAULT_PATH
+    mirror = DEFAULT_PATH
+    friendly_file = DEFAULT_PATH
+    friendly_generated = False
+    friendly_modified = time.ctime(0)
+    meta_file = DEFAULT_PATH
+    meta_generated = False
+    meta_modified = time.ctime(0)
+    xml_file = DEFAULT_PATH
+    xml_generated = False
+    xml_modified = time.ctime(0)
 
     # __init__()
     #
-    # Creates a new project instance. This method assumes that we do not
-    # already have the link to the mirrored files created. It will create
-    # a default mirror link based on is_root
+    # Creates a new project instance
     #
     # Arguments:
     #   - name    - name of the project
-    #   - path    - path to the project (either root or the mirror)
-    #   - is_root - true when the given path is root rather than mirror
-    def __init__(self, name, path, is_root):
+    def __init__(self, name):
         self.name = name
-        
-        if is_root:
-            self.root = Path(path)
-            self.mirror = resolved_root_dir().joinpath(name)
-            self.friendly_generated = True
-        else:
-            self.root = Path(".").joinpath(name)
-            self.mirror = Path(path)
-            self.friendly_generated = False
-        
+        self.root = Path(MIRROR_DIRECTORY).joinpath(name)
+        self.mirror = Path(resolved_root_dir()).joinpath(name)
         self.friendly_file = self.root.joinpath(FRIENDLY_FILE_NAME)
+        self.meta_file = self.root.joinpath(META_FILE_NAME)
+        self.meta_generated = self.meta_file.exists()
         self.xml_file = self.mirror.joinpath(XML_FILE_NAME)
-        self.xml_generated = not self.friendly_generated
+        self.refresh_files_status()
+
+    # saveIC10()
+    #
+    # Overwrites the local friendly file with this project instance's data
+    # def saveIC10(self):
+
+    # loadXML()
+    #
+    # Loads the local friendly file and stores the resulting information
+    # within the project's instance
+    # def loadIC10(self):
+
+    # saveXML()
+    #
+    # Overwrites the game's XML file with this project instance's data
+    # def saveXML(self):
+    #     with open(self.xml_file)
+
+    # loadXML()
+    #
+    # Loads the game's XML file and stores the resulting information within
+    # the project instance
+    def loadXML(self):
+        mirror_logger.debug(f"Loading XML file for project '{self.name}' from '{self.xml_file}'")
+
+        # Perform file status refresh
+        self.refresh_files_status()
+
+        # Don't generate if file doesn't exist
+        if not self.xml_generated:
+            mirror_logger.error(f"Cannot load XML for project '{self.name}' as it hasn't been marked as created yet")
+
+        with open(self.xml_file, 'r') as fh:
+            data = fh.read()
+
+        xml_data = BeautifulSoup(data, "xml")
+        self.date_time = int(xml_data.find("DateTime").text)
+        self.game_version = xml_data.find("GameVersion").text
+        self.description = xml_data.find("Description").text
+        self.author = xml_data.find("Author").text
+        self.workshop_file_handle = int(xml_data.find("WorkshopFileHandle").text)
+        self.instructions = xml_data.find("Instructions").text.split("\n")
+
+    # refresh_files_status()
+    #
+    # Refreshes the generation status and modification timestamps for all
+    # important files within a project
+    def refresh_files_status(self):
+        self.friendly_generated = self.friendly_file.exists()
+        if self.friendly_generated:
+            self.friendly_modified = time.ctime(os.path.getctime(self.friendly_file))
+        self.meta_generated = self.meta_file.exists()
+        if self.meta_generated:
+            self.meta_modified = time.ctime(os.path.getctime(self.meta_file))
+        self.xml_generated = self.xml_file.exists()
+        if self.xml_generated:
+            self.xml_modified = time.ctime(os.path.getctime(self.xml_file))
 
     # find_projects()
     #
-    # Finds all projects within a given directory and initializes empty
-    # projects. Collects all such projects in a list and returns it
+    # Finds the names of all projects within a certain directory
     #
     # NOTE: This function is a bit dumb. It will assume all directories
     #       within the given directory are projects without checking for
@@ -74,16 +138,40 @@ class Project:
     #   - path - path to search for projects
     #
     # Returns:
-    #   - List of projects
-    def find_projects(path, is_root):
+    #   - List of project names
+    def find_projects(path):
         projects = []
         
         for (_, dirs, _) in os.walk(path):
             for dir in dirs:
-                mirror_logger.info(f"Found project {dir}")
+                projects.append(Path(dir).name)
 
         return projects
+    
+    # debug()
+    #
+    # Displays a debug view of this project
+    def debug(self):
+        mirror_logger.debug(f"Project '{self.name}'")
+        mirror_logger.debug(f"  - Root:                 '{self.root}'")
+        mirror_logger.debug(f"  - Name:                 '{self.name}'")
+        mirror_logger.debug(f"  - Game version:         '{self.game_version}'")
+        mirror_logger.debug(f"  - Description:          '{self.description}'")
+        mirror_logger.debug(f"  - Author:               '{self.author}'")
+        mirror_logger.debug(f"  - Workshop file handle:  {self.workshop_file_handle}")
 
+def check_mirror(projects):
+    have_work = False
+    
+    # for project in projects:
+
+
+    return (projects, have_work)
+
+def perform_mirror(projects):
+
+
+    return projects
 
 # mirror()
 #
@@ -94,32 +182,40 @@ class Project:
 #   - mirror_dir - directory to mirror from
 #   - root_dir   - directory that scripts are actually held (Stationers game data)
 def mirror(mirror_dir, root_dir):
-    mirror_logger.info(f"Starting mirror between '{mirror_dir}' and {root_dir}")
+    mirror_logger.info(f"Starting mirror between '{mirror_dir}' and '{root_dir}'")
 
-    root_projects = Project.find_projects(root_dir, True)
-    mirror_projects = Project.find_projects(mirror_dir, False)
-
-    # Let user know if project counts differ
-    if len(root_projects) != len(mirror_projects):
-        mirror_logger.info("Project counts differ")
+    # Find projects
+    root_projects = Project.find_projects(root_dir)
+    mirror_projects = Project.find_projects(mirror_dir)
 
     # Let user know if we did not find any projects
     if len(root_projects) == 0 and len(mirror_projects) == 0:
         mirror_logger.fatal("Could not find any projects")
         return
 
-    # Find projects that aren't mirrored
-    names = [x.name for x in root_projects].append([x.name for x in mirror_projects])
-    known = set()
-    diff = [x for x in names if x not in known and not known.add(x)]
+    # Find only unique projects
+    project_names = list(set(root_projects + mirror_projects))
+    projects = []
+    for name in project_names:
+        projects.append(Project(name))
+        
+    for project in projects:
+        project.loadXML()
+        project.debug()
 
-    # Print projects that aren't mirrored
-    for name in diff:
-        mirror_logger.info(f"Found unmirrored project '{name}'")
+    # Let user know how many projects we found
+    mirror_logger.info(f"Found {len(projects)} projects")
 
     # Mirror forever
     while True:
-        mirror_logger.warning("Not configured to do anything")
+        # Search for changes and queue them
+        (projects, have_work) = check_mirror(projects)
+        
+        # Perform changes only if necessary
+        if have_work:
+            perform_mirror(projects)
+
+        # Wait a bit...
         time.sleep(MIRROR_PERIOD)
 
 # main()
