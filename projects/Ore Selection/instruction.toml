@@ -1,0 +1,8 @@
+name = "Ore Selection"
+
+[meta]
+date_time = 133663520422579966
+game_version = "0.2.5087.23112"
+description = "Ore selection driving ore display and sending requests to the other ICs on the network to feed the automated advanced furnace​"
+author = "dm. (new pc)"
+workshop_file_handle = "dm. (new pc)"

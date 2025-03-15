@@ -1,0 +1,8 @@
+name = "SOC Multi-Display"
+
+[meta]
+date_time = 133647028037604072
+game_version = "0.2.5025.22811"
+description = "SOC display driver that powers an internal and external SOC display​"
+author = "dm."
+workshop_file_handle = "dm."

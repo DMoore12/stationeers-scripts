@@ -1,6 +1,7 @@
 # Global imports
 import os
 import time
+import toml
 import argparse
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -71,17 +72,25 @@ class Project:
         self.xml_file = self.mirror.joinpath(XML_FILE_NAME)
         self.refresh_files_status()
 
+    # ------------------------------------------------------------------------------------------- #
+    # File Reads/Writes                                                                           #
+    # ------------------------------------------------------------------------------------------- #
+
+    # NOTE: When using these functions, it's best to call `self.refresh_files_status()` after
+    #       using these calls as these functions won't update the status of each file. If the
+    #       status isn't updated but a file on the disk is, the main mirror process will detect
+    #       an updated file and refresh again. This will incur 1.5 * MIRROR_PERIOD writes/sec
+
     # saveIC10()
     #
     # Overwrites the local friendly file with this project instance's data
     def saveIC10(self):
         mirror_logger.debug(f"Saving '{str(self.friendly_file)}'")
 
+        # Open and save file
         with open(self.friendly_file, "w+") as fh:
             for line in self.instructions:
                 fh.write(line + "\n")
-
-        self.friendly_generated = True
 
     # loadXML()
     #
@@ -98,6 +107,57 @@ class Project:
         # Open and load file
         with open(self.friendly_file, "r") as fh:
             self.instructions = fh.read()
+
+    # saveMeta()
+    #
+    # Overwrites the local meta file with this project instance's data
+    def saveMeta(self):
+        mirror_logger.debug(f"Saving '{str(self.meta_file)}'")
+
+        # Create empty dicts for data
+        data = {}
+        inner_data = {}
+
+        # Pack data
+        data["name"] = self.name
+        inner_data["date_time"] = self.date_time
+        inner_data["game_version"] = self.game_version
+        inner_data["description"] = self.description
+        inner_data["author"] = self.author
+        inner_data["workshop_file_handle"] = self.author
+        data["meta"] = inner_data
+
+        # Open and save file
+        with open(self.meta_file, "w+") as fh:
+            toml.dump(data, fh)
+
+    # loadMeta()
+    #
+    # Loads the local meta file and stores the resulting information within
+    # the project's instance
+    def loadMeta(self):
+        mirror_logger.debug(f"Loading '{str(self.meta_file)}'")
+
+        # Don't load if file doesn't exist
+        if not self.meta_generated:
+            mirror_logger.error(f"Cannot load metadata for project '{self.name}' as it hasn't been marked as created yet...")
+            return
+        
+        # Open and load file
+        with open(self.meta_file, "r") as fh:
+            data = toml.load(fh)
+
+            # Make sure base project name matches
+            if self.name != data["name"]:
+                mirror_logger.warning(f"Name mismatch detected in meta file for project '{self.name}'")
+                mirror_logger.info(f"Correcting name mismatch...")
+                mirror_logger.info(f"If you wish to rename your project, change the directory name within your local scripts and delete the old directory within the game's files")
+
+            self.date_time = data["meta"]["date_time"]
+            self.game_version = data["meta"]["game_version"]
+            self.description = data["meta"]["description"]
+            self.author = data["meta"]["author"]
+            self.workshop_file_handle = data["meta"]["workshop_file_handle"]
 
     # modifyXML()
     #
@@ -132,8 +192,6 @@ class Project:
                 fh.write(xml_data.prettify())
         except Exception as e:
             mirror_logger.error(f"Failed to update XML tag for project '{self.name}'")
-        finally:
-            self.refresh_files_status()
 
     # saveXML()
     #
@@ -141,14 +199,13 @@ class Project:
     def saveXML(self):
         mirror_logger.debug(f"Saving '{str(self.xml_file)}'")
 
+        # Open and save file
         with open(self.xml_file, 'w+') as fh:
             mirror_logger.error(f"XML 'saving' not implemented. You must use XML modification for now...")
             mirror_logger.error(f"XML saving cannot be implemented until meta files are being saved")
             mirror_logger.error(f"We cannot overwrite the meta within the XML if the IC10 is newer on startup...")
             mirror_logger.error(f"And we certainly don't want to overwrite any new changes on startup. Modification it is (for now)")
             return
-
-        self.xml_generated = True
 
     # loadXML()
     #
@@ -174,6 +231,10 @@ class Project:
         self.author = xml_data.find("Author").text.strip()
         self.workshop_file_handle = int(xml_data.find("WorkshopFileHandle").text.strip())
         self.instructions = xml_data.find("Instructions").text.strip().split("\n")
+
+    # ------------------------------------------------------------------------------------------- #
+    # Miscellaneous Methods                                                                       #
+    # ------------------------------------------------------------------------------------------- #
 
     # refresh_files_status()
     #
@@ -220,14 +281,30 @@ class Project:
         friendly_time = datetime.fromtimestamp(self.friendly_modified)
         xml_time = datetime.fromtimestamp(self.xml_modified)
 
-        # If local is newer than the game's copy, write to the game's copy
-        if friendly_time > xml_time:
-            self.loadIC10()
-            self.modifyXML()
-        # Else, 
-        else:
-            self.loadXML()
-            self.saveIC10()
+        # Determine which file to write
+        max = self.friendly_modified
+        save_xml = True
+        if self.meta_modified > max:
+            max = self.meta_modified
+        if self.xml_modified > max:
+            max = self.xml_modified
+            save_xml = False
+
+        # Perform mirror depending on which file to save
+        # NOTE: I hate Python so much :/
+        match save_xml:
+            # SAVE_FRIENDLY - load the XML copy, then write contents to IC10
+            case True:
+                self.loadIC10()
+                self.loadMeta()
+                self.modifyXML()
+
+            case False:
+                self.loadXML()
+                self.saveMeta()
+                self.saveIC10()
+
+        self.refresh_files_status()
 
     # find_projects()
     #

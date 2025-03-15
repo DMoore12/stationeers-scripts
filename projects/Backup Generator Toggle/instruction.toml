@@ -1,0 +1,8 @@
+name = "Backup Generator Toggle"
+
+[meta]
+date_time = 133646972409091823
+game_version = "0.2.5025.22811"
+description = "Handles generator and light toggling based on a battery's current SOC​"
+author = "dm."
+workshop_file_handle = "dm."

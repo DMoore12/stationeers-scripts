@@ -1,0 +1,8 @@
+name = "Furnace Gas Control"
+
+[meta]
+date_time = 133664356010791267
+game_version = "0.2.5087.23112"
+description = "Controls gas inputs, furnace inputs and outputs, and pressure relief to hit desired setpoints​"
+author = "dm. (new pc)"
+workshop_file_handle = "dm. (new pc)"
