@@ -5,4 +5,4 @@ date_time = 133664339801277476
 game_version = "0.2.5087.23112"
 description = "Reads the furnace setpoints and broadcasts them over the network for the main furnace controller to consume​"
 author = "dm. (new pc)"
-workshop_file_handle = "dm. (new pc)"
+workshop_file_handle = 0

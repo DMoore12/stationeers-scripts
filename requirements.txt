@@ -31,6 +31,7 @@ skia-pathops==0.8.0.post2
 soupsieve==2.6
 srt==3.5.3
 svgelements==1.9.6
+toml==0.10.2
 tqdm==4.67.1
 typing_extensions==4.12.2
 watchdog==6.0.0

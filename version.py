@@ -47,15 +47,7 @@ class Version:
         major = int(groups[1])
         minor = int(groups[2])
         patch = int(groups[3])
-        proto = True
-
-        # Forgive me Lord, for I am lazy...
-        try:
-            _ = chr(groups[4])
-        except:
-            pass
-        finally:
-            proto = False
+        proto = groups[4] != None
 
         return Version(major, minor, patch, proto)
 
@@ -107,7 +99,7 @@ class Version:
     def islteq(self, v):
         comp = self.compare(v)
 
-        return comp == self.LESS_THAN or comp == self.LESS_THAN
+        return comp == self.LESS_THAN or comp == self.EQUAL
     
     # isgteq()
     #
@@ -121,7 +113,7 @@ class Version:
     def isgteq(self, v):
         comp = self.compare(v)
 
-        return comp == self.LESS_THAN or comp == self.GREATER_THAN
+        return comp == self.GREATER_THAN or comp == self.EQUAL
 
     # compare()
     #
@@ -143,8 +135,11 @@ class Version:
             ret = self.GREATER_THAN
         elif self.minor < v.minor:
             ret = self.LESS_THAN
-        elif not self.proto and v.proto:
-            ret = self.GREATER_THAN
+        elif self.proto != v.proto:
+            if self.proto:
+                ret = self.LESS_THAN
+            else:
+                ret = self.GREATER_THAN
 
         return ret
     
@@ -155,7 +150,7 @@ class Version:
         ret = f"{self.major}.{self.minor}.{self.patch}"
         if self.proto:
             ret += ".b"
-        return ret    
+        return ret
 
     # debug()
     #
@@ -185,7 +180,7 @@ if __name__ == "__main__":
 
     # Create production version with long values
     v3 = Version.from_string("101.202.313")
-    assert v3.iseq(Version(0, 0, 0, True))
+    assert not v3.iseq(Version(0, 0, 0, True))
 
     # Check equality operator
     assert v1.iseq(vpeq)
@@ -218,9 +213,9 @@ if __name__ == "__main__":
     assert v2.isgt(vblo)
 
     # Check less than or equal to operator
-    assert not v1.islteq(vpeq)
+    assert v1.islteq(vpeq)
     assert not v1.islteq(v2)
-    assert not v2.islteq(vbeq)
+    assert v2.islteq(vbeq)
     assert v2.islteq(v1)
     assert v1.islteq(vphi)
     assert v2.islteq(vbhi)
@@ -244,3 +239,5 @@ if __name__ == "__main__":
     # Create an invalid version with string
     ver = Version.from_string("0,2.4,2")
     assert ver.iseq(Version(0, 0, 0, False))
+
+    print("All tests passed...")

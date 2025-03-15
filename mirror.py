@@ -9,9 +9,10 @@ from datetime import datetime
 # Local imports
 from utils import *
 from dconf import Config
+from version import Version
 
 # Config object
-config = Config("projects", PROJECT_CONFIG)
+conf = Config("projects/.meta.toml")
 
 # Logging object
 mirror_logger = config_logging(Path(__file__).name.replace(".py", ""))
@@ -142,7 +143,7 @@ class Project:
         inner_data["game_version"] = self.game_version
         inner_data["description"] = self.description
         inner_data["author"] = self.author
-        inner_data["workshop_file_handle"] = self.author
+        inner_data["workshop_file_handle"] = self.workshop_file_handle
         data["meta"] = inner_data
 
         # Bail on write, if necessary
@@ -150,11 +151,10 @@ class Project:
             mirror_logger.info(f"Skipping write of '{str(self.meta_file)}'")
             mirror_logger.debug(f"Expected file contents:")
 
-            for outer_item in data:
-                mirror_logger.debug(f"  '{data}'")
+            contents = f"{data}".strip().split("\n")
 
-                for inner_item in data[outer_item]:
-                    mirror_logger.debug(f"    {inner_item}: {data[outer_item][inner_item]}")
+            for line in contents:
+                mirror_logger.debug(f"  {line.strip()}")
 
             return
 
@@ -217,12 +217,12 @@ class Project:
 
         # Attempt to update the tag
         try:
-            xml_data.find("DateTime").string = self.date_time
+            xml_data.find("DateTime").string = str(self.date_time)
             xml_data.find("GameVersion").string = self.game_version
             xml_data.find("Title").string = self.name
             xml_data.find("Description").string = self.description
-            xml_data.find("Author").string = self.description
-            xml_data.find("WorkshopFileHandle").string = self.workshop_file_handle
+            xml_data.find("Author").string = self.author
+            xml_data.find("WorkshopFileHandle").string = str(self.workshop_file_handle)
             xml_data.find("Instructions").string = instructions
 
             # Bail on write, if necessary
@@ -230,11 +230,10 @@ class Project:
                 mirror_logger.info(f"Skipping write of '{str(self.xml_file)}'")
                 mirror_logger.debug(f"Expected file contents:")
 
-                for outer_item in xml_data:
-                    mirror_logger.debug(f"  '{data}'")
+                contents = f"{xml_data}".strip().split("\n")
 
-                    for inner_item in data[outer_item]:
-                        mirror_logger.debug(f"    {inner_item}: {data[outer_item][inner_item]}")
+                for line in contents:
+                    mirror_logger.debug(f"  {line.strip()}")
 
                 return
 
@@ -242,7 +241,10 @@ class Project:
                 mirror_logger.debug(f"Saving '{str(self.xml_file)}")
                 fh.write(xml_data.prettify())
         except Exception as e:
-            mirror_logger.error(f"Failed to update XML tag for project '{self.name}'")
+            mirror_logger.error(f"Failed to update XML tag for project '{self.name}':")
+            e = f"{e}".strip().split("\n")
+            for line in e:
+                mirror_logger.error(f"  {line}")
 
     # loadXML()
     #
@@ -261,13 +263,19 @@ class Project:
             data = fh.read()
 
         # Parse, strip, and unpack everything
-        xml_data = BeautifulSoup(data, "xml")
-        self.date_time = int(xml_data.find("DateTime").text.strip())
-        self.game_version = xml_data.find("GameVersion").text.strip()
-        self.description = xml_data.find("Description").text.strip()
-        self.author = xml_data.find("Author").text.strip()
-        self.workshop_file_handle = int(xml_data.find("WorkshopFileHandle").text.strip())
-        self.instructions = xml_data.find("Instructions").text.strip().split("\n")
+        try:
+            xml_data = BeautifulSoup(data, "xml")
+            self.date_time = int(xml_data.find("DateTime").text.strip())
+            self.game_version = xml_data.find("GameVersion").text.strip()
+            self.description = xml_data.find("Description").text.strip()
+            self.author = xml_data.find("Author").text.strip()
+            self.workshop_file_handle = int(xml_data.find("WorkshopFileHandle").text.strip())
+            self.instructions = xml_data.find("Instructions").text.strip().split("\n")
+        except Exception as e:
+            mirror_logger.error(f"Failed to parse XML tag for project '{self.name}':")
+            e = f"{e}".strip().split("\n")
+            for line in e:
+                mirror_logger.error(f"  {line}")
 
     # ------------------------------------------------------------------------------------------- #
     # Miscellaneous Methods                                                                       #
@@ -394,10 +402,11 @@ def mirror_all(projects):
 # within the mirror.py file, but shoot ya shot playa
 #
 # Arguments:
-#   - mirror_dir - directory to mirror from
-#   - root_dir   - directory that scripts are actually held (Stationers game data)
-#   - one_shot   - if true, this function will not mirror forever
-def mirror_process(mirror_dir, root_dir, one_shot=False):
+#   - mirror_dir  - directory to mirror from
+#   - root_dir    - directory that scripts are actually held (Stationers game data)
+#   - block_write - if true, no files will be modified, but intended contents will be dumped to debug
+#   - one_shot    - if true, this function will not mirror forever
+def mirror_process(mirror_dir, root_dir, block_write, one_shot=False):
     mirror_logger.info(f"Starting mirror between '{mirror_dir}' and '{root_dir}'")
 
     # Find projects
@@ -413,7 +422,7 @@ def mirror_process(mirror_dir, root_dir, one_shot=False):
     project_names = list(set(root_projects + mirror_projects))
     projects = []
     for name in project_names:
-        projects.append(Project(name))
+        projects.append(Project(name, block_write))
         
     for project in projects:
         project.loadXML()
@@ -463,7 +472,7 @@ def main(args):
         # Reinitialize
         mirror_logger = config_logging(Path(__file__).name.replace(".py", ""), logging.DEBUG)
 
-    mirror_process(MIRROR_DIRECTORY, resolved_root_dir(), args.one_shot)
+    mirror_process(MIRROR_DIRECTORY, resolved_root_dir(), args.test, args.one_shot)
 
 # Entry point
 #

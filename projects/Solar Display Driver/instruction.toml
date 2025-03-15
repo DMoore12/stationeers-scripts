@@ -5,4 +5,4 @@ date_time = 133647044430342009
 game_version = "0.2.5025.22811"
 description = "Display driver for solar unit SOC and power displays​"
 author = "dm."
-workshop_file_handle = "dm."
+workshop_file_handle = 0

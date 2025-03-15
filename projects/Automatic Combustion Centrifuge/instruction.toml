@@ -5,4 +5,4 @@ date_time = 133666709563185873
 game_version = "0.2.5087.23112"
 description = "Automatically controls the combustion centrifuge. Ramps up to full power, then down when nearing full capacity. Automatically pulls lever and empties all reagents below 100 RPM. Then restarts the cycle​"
 author = "dm. (new pc)"
-workshop_file_handle = "dm. (new pc)"
+workshop_file_handle = 0

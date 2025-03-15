@@ -3,6 +3,6 @@ name = "(New) Battery SOC Display Driver"
 [meta]
 date_time = 133852716848055501
 game_version = "0.2.5370.24111"
-description = "​"
-author = "dm. (new pc)"
-workshop_file_handle = "dm. (new pc)"
+description = "Battery SOC Display Driver. NOTE: I removed a special character, so this one might break"
+author = "dm."
+workshop_file_handle = 0
