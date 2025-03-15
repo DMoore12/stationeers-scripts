@@ -8,6 +8,10 @@ from datetime import datetime
 
 # Local imports
 from utils import *
+from dconf import Config
+
+# Config object
+config = Config("projects", PROJECT_CONFIG)
 
 # Logging object
 mirror_logger = config_logging(Path(__file__).name.replace(".py", ""))
@@ -16,8 +20,8 @@ mirror_logger = config_logging(Path(__file__).name.replace(".py", ""))
 class Project:
     # NOTES:
     #   - A project's 'root' is the directory on your drive where Stationeers
-    #     saves individual IC10 projects. The 'mirror' directory is where this
-    #     script saves 'friendly' files that are stored on Github
+    #     Writes individual IC10 projects. The 'mirror' directory is where this
+    #     script writes 'friendly' files that are stored on Github
     #   - The game stores IC10 scripts in XML files. They're primarly just the
     #     code you write with the ingame editor, but there is a bit of additional
     #     fluff that can get annooying. 'Friendly' files are the same as the XML
@@ -59,8 +63,9 @@ class Project:
     # Creates a new project instance
     #
     # Arguments:
-    #   - name    - name of the project
-    def __init__(self, name):
+    #   - name        - name of the project
+    #   - block_write - blocks FS writes when true
+    def __init__(self, name, block_write):
         self.name = name
         self.root = Path(MIRROR_DIRECTORY).joinpath(name)
         self.root.mkdir(parents=True, exist_ok=True)
@@ -70,6 +75,7 @@ class Project:
         self.meta_file = self.root.joinpath(META_FILE_NAME)
         self.meta_generated = self.meta_file.exists()
         self.xml_file = self.mirror.joinpath(XML_FILE_NAME)
+        self.block_write = block_write
         self.refresh_files_status()
 
     # ------------------------------------------------------------------------------------------- #
@@ -81,13 +87,25 @@ class Project:
     #       status isn't updated but a file on the disk is, the main mirror process will detect
     #       an updated file and refresh again. This will incur 1.5 * MIRROR_PERIOD writes/sec
 
-    # saveIC10()
+    # writeIC10()
     #
     # Overwrites the local friendly file with this project instance's data
-    def saveIC10(self):
+    def writeIC10(self):
         mirror_logger.debug(f"Saving '{str(self.friendly_file)}'")
 
-        # Open and save file
+        # Bail on write, if necessary
+        if self.block_write:
+            idx = 0
+
+            mirror_logger.info(f"Skipping write of '{str(self.friendly_file)}'")
+            mirror_logger.debug(f"Expected file contents:")
+
+            for line in self.instructions:
+                mirror_logger.debug(f"  {idx:3}  {line}")
+            
+            return
+
+        # Open and write file
         with open(self.friendly_file, "w+") as fh:
             for line in self.instructions:
                 fh.write(line + "\n")
@@ -108,10 +126,10 @@ class Project:
         with open(self.friendly_file, "r") as fh:
             self.instructions = fh.read()
 
-    # saveMeta()
+    # writeMeta()
     #
     # Overwrites the local meta file with this project instance's data
-    def saveMeta(self):
+    def writeMeta(self):
         mirror_logger.debug(f"Saving '{str(self.meta_file)}'")
 
         # Create empty dicts for data
@@ -127,7 +145,20 @@ class Project:
         inner_data["workshop_file_handle"] = self.author
         data["meta"] = inner_data
 
-        # Open and save file
+        # Bail on write, if necessary
+        if self.block_write:
+            mirror_logger.info(f"Skipping write of '{str(self.meta_file)}'")
+            mirror_logger.debug(f"Expected file contents:")
+
+            for outer_item in data:
+                mirror_logger.debug(f"  '{data}'")
+
+                for inner_item in data[outer_item]:
+                    mirror_logger.debug(f"    {inner_item}: {data[outer_item][inner_item]}")
+
+            return
+
+        # Open and write file
         with open(self.meta_file, "w+") as fh:
             toml.dump(data, fh)
 
@@ -147,24 +178,25 @@ class Project:
         with open(self.meta_file, "r") as fh:
             data = toml.load(fh)
 
-            # Make sure base project name matches
-            if self.name != data["name"]:
-                mirror_logger.warning(f"Name mismatch detected in meta file for project '{self.name}'")
-                mirror_logger.info(f"Correcting name mismatch...")
-                mirror_logger.info(f"If you wish to rename your project, change the directory name within your local scripts and delete the old directory within the game's files")
+        # Make sure base project name matches
+        if self.name != data["name"]:
+            mirror_logger.warning(f"Name mismatch detected in meta file for project '{self.name}'")
+            mirror_logger.info(f"Correcting name mismatch...")
+            mirror_logger.info(f"If you wish to rename your project, change the directory name within your local scripts and delete the old directory within the game's files")
 
-            self.date_time = data["meta"]["date_time"]
-            self.game_version = data["meta"]["game_version"]
-            self.description = data["meta"]["description"]
-            self.author = data["meta"]["author"]
-            self.workshop_file_handle = data["meta"]["workshop_file_handle"]
+        self.date_time = data["meta"]["date_time"]
+        self.game_version = data["meta"]["game_version"]
+        self.description = data["meta"]["description"]
+        self.author = data["meta"]["author"]
+        self.workshop_file_handle = data["meta"]["workshop_file_handle"]
 
-    # modifyXML()
+    # writeXML()
     #
-    # Overwrites the game's XMl file with this project's instruction data.
-    # Does not output any metadata
-    def modifyXML(self):
+    # Overwrites the game's XML file with this project instance's data
+    def writeXML(self):
         mirror_logger.debug(f"Loading '{str(self.xml_file)}'")
+
+        # I'm lazy, so we're just going to load and modify the data
 
         # Don't load if file doesn't exist
         if not self.xml_generated:
@@ -185,27 +217,32 @@ class Project:
 
         # Attempt to update the tag
         try:
+            xml_data.find("DateTime").string = self.date_time
+            xml_data.find("GameVersion").string = self.game_version
+            xml_data.find("Title").string = self.name
+            xml_data.find("Description").string = self.description
+            xml_data.find("Author").string = self.description
+            xml_data.find("WorkshopFileHandle").string = self.workshop_file_handle
             xml_data.find("Instructions").string = instructions
+
+            # Bail on write, if necessary
+            if self.block_write:
+                mirror_logger.info(f"Skipping write of '{str(self.xml_file)}'")
+                mirror_logger.debug(f"Expected file contents:")
+
+                for outer_item in xml_data:
+                    mirror_logger.debug(f"  '{data}'")
+
+                    for inner_item in data[outer_item]:
+                        mirror_logger.debug(f"    {inner_item}: {data[outer_item][inner_item]}")
+
+                return
 
             with open(self.xml_file, 'w+') as fh:
                 mirror_logger.debug(f"Saving '{str(self.xml_file)}")
                 fh.write(xml_data.prettify())
         except Exception as e:
             mirror_logger.error(f"Failed to update XML tag for project '{self.name}'")
-
-    # saveXML()
-    #
-    # Overwrites the game's XML file with this project instance's data
-    def saveXML(self):
-        mirror_logger.debug(f"Saving '{str(self.xml_file)}'")
-
-        # Open and save file
-        with open(self.xml_file, 'w+') as fh:
-            mirror_logger.error(f"XML 'saving' not implemented. You must use XML modification for now...")
-            mirror_logger.error(f"XML saving cannot be implemented until meta files are being saved")
-            mirror_logger.error(f"We cannot overwrite the meta within the XML if the IC10 is newer on startup...")
-            mirror_logger.error(f"And we certainly don't want to overwrite any new changes on startup. Modification it is (for now)")
-            return
 
     # loadXML()
     #
@@ -278,31 +315,28 @@ class Project:
     # it is already known there is work to do. This function will blindly
     # overwrite in one direction depending on which file is newest
     def perform_mirror(self):
-        friendly_time = datetime.fromtimestamp(self.friendly_modified)
-        xml_time = datetime.fromtimestamp(self.xml_modified)
-
         # Determine which file to write
         max = self.friendly_modified
-        save_xml = True
+        write_xml = True
         if self.meta_modified > max:
             max = self.meta_modified
         if self.xml_modified > max:
             max = self.xml_modified
-            save_xml = False
+            write_xml = False
 
-        # Perform mirror depending on which file to save
-        # NOTE: I hate Python so much :/
-        match save_xml:
-            # SAVE_FRIENDLY - load the XML copy, then write contents to IC10
+        # Perform mirror depending on which file to write
+        match write_xml:
+            # IC10 or meta file is newest, so load local files and write to XML
             case True:
                 self.loadIC10()
                 self.loadMeta()
-                self.modifyXML()
+                self.writeXML()
 
+            # XML is newest, so load XML and write to local files
             case False:
                 self.loadXML()
-                self.saveMeta()
-                self.saveIC10()
+                self.writeMeta()
+                self.writeIC10()
 
         self.refresh_files_status()
 
@@ -437,7 +471,8 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Stationeers script mirroring service")
 
-    parser.add_argument('--one_shot', action='store_true', help="Performs a single synchronization, then exits")
-    parser.add_argument('--verbose', action='store_true', help="Enables verbose (debug) output")
+    parser.add_argument("--one_shot", action="store_true", help="Performs a single synchronization, then exits")
+    parser.add_argument("--verbose", action="store_true", help="Enables verbose (debug) output")
+    parser.add_argument("--test", action="store_true", help="Stops files from actually being written")
 
     main(parser.parse_args())

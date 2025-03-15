@@ -31,8 +31,9 @@ You may view the program help by adding the `-h` or `--help` arguments.
 ## TODO:
 
 - [X] Automatic mirroring of files to target directory
-- [ ] File metadata storage and transfer
+- [X] File metadata storage and transfer
 - [ ] File versioning
 - [ ] Program metadata (runtime, stats, etc.)
 - [ ] Proper program configuration
 - [ ] Minimize code prior to writing XML
+- [ ] Copy XML format of game's files
